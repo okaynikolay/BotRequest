@@ -41,9 +41,6 @@ def add_url(message):
             js[len(js)] = message.text
             json.dump(js, f)
 
-def send_message(chat_id=CHAT_ID, text):
-    bot.send_message(chat_id, text)
-
 def callback_check():
     callback = bot.get_updates[-1].callback_query
     if callback.data == 'new':
@@ -60,8 +57,8 @@ def main():
             check_time = time.time()
 
         if time.time() - update_time >= 20:
-            ''' 
             message = bot.get_updates()[-1].message
+            '''
             if time.time() - message.date < 30:
                 keyboard = types.InlineKeyboardMarkup()
                 new_data = types.InlineKeyboardButton(text='Добавить новый сайт', callback_data='new')
