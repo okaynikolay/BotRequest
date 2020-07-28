@@ -98,7 +98,7 @@ def main():
     update_time = time.time()
     check_time = time.time()
     while True:
-        if time.time() - check_time >= 300:
+        if time.time() - check_time >= 3600:
             with open('urls.json') as f:
                 urls = json.load(f)
             check_list(urls)
