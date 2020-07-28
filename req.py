@@ -59,7 +59,8 @@ def main():
             check_list(urls)
             check_time = time.time()
 
-        if time.time() - update_time >= 20: 
+        if time.time() - update_time >= 20:
+            ''' 
             message = bot.get_updates()[-1].message
             if time.time() - message.date < 30:
                 keyboard = types.InlineKeyboardMarkup()
@@ -70,7 +71,7 @@ def main():
                 dal_data = types.InlineKeyboardButton(text='Удалить сайт', callback_data='dels')
                 keyboard.add(dal_data)
                 bot.send_message(CHAT_ID, 'Здравствуйте.', reply_markup=keyboard)
-
+            '''
             if message.text.split('//')[0] in ['http:','https:']: 
                 add_url(message)
             update_time = time.time()
