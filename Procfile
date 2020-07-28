@@ -1,1 +1,1 @@
-web: python req.py
+worker: python req.py
