@@ -47,7 +47,7 @@ def send_message(chat_id=CHAT_ID, text):
 def callback_check():
     callback = bot.get_updates[-1].callback_query
     if callback.data == 'new':
-        send_message(
+        send_message()
 
 def main():
     update_time = time.time()
