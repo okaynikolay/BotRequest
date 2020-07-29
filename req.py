@@ -39,7 +39,7 @@ def check_list(urls):
     for url in urls:
         status = req(url)
         if status != 200:
-            send_message('Status {} for url: {}'.format(status, url))
+            bot.send_message('219597066', 'Status {} for url: {}'.format(status, url))
 
 def add_url(message):
     '''
