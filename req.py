@@ -7,7 +7,11 @@ import telebot
 
 BOT_TOKEN = "1324460923:AAHfXx4AW1pCmxa9figy5EKgkCbnS7xzo74"
 
-CHAT_ID = '483882071' # чат для обратной связи
+try:
+    with open('chat_id.txt') as f:
+        CHAT_ID = f.readline().strip()
+except FileNotFoundError:
+    CHAT_ID = '483882071' # чат для обратной связи
 
 bot = telebot.TeleBot(BOT_TOKEN)
 
@@ -18,8 +22,13 @@ def req(url):
     response = requests.get(url)
     return response.status_code
 
-def send_message(text):
-    bot.send_message(CHAT_ID, text)
+def send_message(text, markup=None):
+    try:
+        with open('chat_id.txt') as f:
+            chat_id = f.readline().strip()
+    except FileNotFoundError:
+        chat_id = change_target()
+    bot.send_message(chat_id, text, reply_markup=markup)
 
 def check_list(urls):
     '''
@@ -39,17 +48,29 @@ def add_url(message):
     '''
     with open('urls.json') as f:
         js = json.load(f)
-    if message.text not in js.values():
+    if message.text not in js:
         with open('urls.json', 'w') as f:
             js[message.text] = len(js.values())
             json.dump(js, f)
 
 def delete_url(message):
     url = message.text
-    with open('urls.json', 'w') as f:
+    with open('urls.json') as f:
         js = json.load(f)
-        js.pop(url)
+        if url in js:
+            js.pop(url)
+    with open('urls.json', 'w') as f:
         json.dump(js, f)
+
+def change_target():
+    try:
+        target = bot.get_updates()[-1].message.chat.id
+    except AttributeError:
+        target = bot.get_updates()[-1].callback_query.from_user.id
+    with open('chat_id.txt', 'w') as f:
+        f.write(str(target))
+    return str(target)
+    
 
 def status_check(atribut = 'message'):
     '''
@@ -67,6 +88,7 @@ def status_check(atribut = 'message'):
                 return data
             elif atribut == 'callback':
                 data = bot.get_updates()[-1].callback_query
+                print(data.data)
                 return data
         except AttributeError:
             pass
@@ -90,13 +112,14 @@ def callback_check():
         for i in js.keys():
             send_message(i)
     elif callback.data == 'dels':
-        send_message('Введите адрес сайта, который хотите удалить')
+        send_message('Введите адрес сайта, который хотите удалить:')
         mesage = status_check()
         if mesage: delete_url(mesage)
 
 def main():
     update_time = time.time()
     check_time = time.time()
+    last_update = None
     while True:
         if time.time() - check_time >= 3600:
             with open('urls.json') as f:
@@ -104,13 +127,10 @@ def main():
             check_list(urls)
             check_time = time.time()
 
-        if time.time() - update_time >= 10:
+        if time.time() - update_time >= 5:
             
-            try:
-                date = bot.get_updates()[-1].message.date
-            except AttributeError:
-                date = False
-            if time.time() - date < 20:
+            update = bot.get_updates()[-1]
+            if update.update_id != last_update:
                 keyboard = types.InlineKeyboardMarkup()
                 new_data = types.InlineKeyboardButton(text='Добавить новый сайт', callback_data='new')
                 keyboard.add(new_data)
@@ -118,10 +138,16 @@ def main():
                 keyboard.add(all_data)
                 dal_data = types.InlineKeyboardButton(text='Удалить сайт', callback_data='dels')
                 keyboard.add(dal_data)
-                bot.send_message(CHAT_ID, 'Здравствуйте.', reply_markup=keyboard)
-                time.sleep(3)
+                if update.message is not None:
+                    if update.message.text == '/target':
+                        change_target()
+                    send_message('Здравствуйте.', markup=keyboard)
+                time.sleep(2)
                 callback_check()
             
+            
+            last_update = bot.get_updates()[-1].update_id
+            bot.get_updates(offset=last_update)
             update_time = time.time()
         
 
