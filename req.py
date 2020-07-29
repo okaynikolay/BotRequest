@@ -148,7 +148,7 @@ def main():
             
             
                 last_update = bot.get_updates()[-1].update_id
-                bot.get_updates(offset=last_update)
+                bot.get_updates(offset=last_update+1)
             update_time = time.time()
         
 
