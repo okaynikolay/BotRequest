@@ -127,9 +127,11 @@ def main():
             check_time = time.time()
 
         if time.time() - update_time >= 5:
-            
-            update = bot.get_updates()[-1]
-            if update.update_id != last_update:
+            try:
+                update = bot.get_updates()[-1].update_id
+            except:
+                update = False
+            if update:
                 keyboard = types.InlineKeyboardMarkup()
                 new_data = types.InlineKeyboardButton(text='Добавить новый сайт', callback_data='new')
                 keyboard.add(new_data)
