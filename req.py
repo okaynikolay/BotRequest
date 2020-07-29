@@ -88,7 +88,6 @@ def status_check(atribut = 'message'):
                 return data
             elif atribut == 'callback':
                 data = bot.get_updates()[-1].callback_query
-                print(data.data)
                 return data
         except AttributeError:
             pass
@@ -146,8 +145,8 @@ def main():
                 callback_check()
             
             
-            last_update = bot.get_updates()[-1].update_id
-            bot.get_updates(offset=last_update)
+                last_update = bot.get_updates()[-1].update_id
+                bot.get_updates(offset=last_update)
             update_time = time.time()
         
 
