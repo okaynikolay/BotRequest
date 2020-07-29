@@ -128,7 +128,7 @@ def main():
 
         if time.time() - update_time >= 5:
             try:
-                update = bot.get_updates()[-1].update_id
+                update = bot.get_updates()[-1]
             except:
                 update = False
             if update:
