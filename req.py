@@ -24,8 +24,9 @@ def req(url):
 
 def send_message(text, markup=None):
     try:
-        with open('chat_id.txt') as f:
-            chat_id = f.readline().strip()
+        with open('ids.json') as f:
+            js = json.load(f)
+            chat_id = str(js['main'])
     except FileNotFoundError:
         chat_id = change_target()
     bot.send_message(chat_id, text, reply_markup=markup)
@@ -36,10 +37,14 @@ def check_list(urls):
     адреса статус не равен 200 - отправляет
     сообщение в заданный чат тг
     '''
+    
     for url in urls:
         status = req(url)
         if status != 200:
-            bot.send_message('219597066', 'Status {} for url: {}'.format(status, url))
+            with open('ids.json') as f:
+                js = json.load(f)
+            for id in js.values():
+                bot.send_message(str(js[id]), 'Status {} for url: {}'.format(status, url))
 
 def add_url(message):
     '''
@@ -48,9 +53,9 @@ def add_url(message):
     '''
     with open('urls.json') as f:
         js = json.load(f)
-    if message.text not in js:
+    if message.text not in js and message.text.split('//')[0] in ['http:', 'https:']:
+        js[message.text] = len(js)
         with open('urls.json', 'w') as f:
-            js[message.text] = len(js.values())
             json.dump(js, f)
 
 def delete_url(message):
@@ -67,8 +72,14 @@ def change_target():
         target = bot.get_updates()[-1].message.chat.id
     except AttributeError:
         target = bot.get_updates()[-1].callback_query.from_user.id
-    with open('chat_id.txt', 'w') as f:
-        f.write(str(target))
+    with open('ids.json') as f:
+        js = json.load(f)
+        for id in js:
+            if target == js[id]:
+                js[id] = js['main']
+        js['main'] = target
+    with open('ids.json', 'w') as f:
+        json.dump(js, f)
     return str(target)
     
 
@@ -85,10 +96,12 @@ def status_check(atribut = 'message'):
         try:
             if atribut == 'message':
                 data = bot.get_updates()[-1].message
-                return data
+                if data is not None:
+                    return data
             elif atribut == 'callback':
                 data = bot.get_updates()[-1].callback_query
-                return data
+                if data is not None:
+                    return data
         except AttributeError:
             pass
     return False   
@@ -115,6 +128,18 @@ def callback_check():
         mesage = status_check()
         if mesage: delete_url(mesage)
 
+def check_id(update):
+    try:
+        id = update.message.chat.id
+    except AttributeError:
+        id = update.callback_query.from_user.id
+    with open('ids.json') as f:
+        js = json.load(f)
+        if id not in js.values():
+            js[len(js)] = id
+    with open('ids.json', 'w') as f:
+        json.dump(js, f)
+
 def main():
     update_time = time.time()
     check_time = time.time()
@@ -131,7 +156,9 @@ def main():
                 update = bot.get_updates()[-1]
             except:
                 update = False
+            #print(update)
             if update:
+                check_id(update)
                 keyboard = types.InlineKeyboardMarkup()
                 new_data = types.InlineKeyboardButton(text='Добавить новый сайт', callback_data='new')
                 keyboard.add(new_data)
@@ -145,8 +172,7 @@ def main():
                     send_message('Здравствуйте.', markup=keyboard)
                 time.sleep(2)
                 callback_check()
-            
-            
+             
                 last_update = bot.get_updates()[-1].update_id
                 bot.get_updates(offset=last_update+1)
             update_time = time.time()
