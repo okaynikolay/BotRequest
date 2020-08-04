@@ -4,15 +4,19 @@ from telebot import types
 from datetime import datetime
 import time
 import telebot
+import bd
 
+CHECK_TIME = 120
 BOT_TOKEN = "1324460923:AAHfXx4AW1pCmxa9figy5EKgkCbnS7xzo74"
+#BOT_TOKEN = '1203380304:AAHc29nuwOoU11mmkuMVMLvUgJryXqT8naM'
 
-try:
-    with open('chat_id.txt') as f:
-        CHAT_ID = f.readline().strip()
-except FileNotFoundError:
-    CHAT_ID = '483882071' # чат для обратной связи
+database = 'deb835kopu38ms'
+user = 'ulpmxogeoykreg'
+password = 'efa33982c38a7c5135fab2b4647914b8905d0baceb8bcf3929b04fab075bc8ab'
+host = 'ec2-34-225-162-157.compute-1.amazonaws.com'
+port = '5432'
 
+database = bd.TestReqBD(database, user, password, host, port)
 bot = telebot.TeleBot(BOT_TOKEN)
 
 def req(url):
@@ -23,13 +27,8 @@ def req(url):
     return response.status_code
 
 def send_message(text, markup=None):
-    try:
-        with open('ids.json') as f:
-            js = json.load(f)
-            chat_id = str(js['main'])
-    except FileNotFoundError:
-        chat_id = change_target()
-    bot.send_message(chat_id, text, reply_markup=markup)
+    admin_id = str(database.get_admin())
+    bot.send_message(admin_id, text, reply_markup=markup)
 
 def check_list(urls):
     '''
@@ -37,51 +36,38 @@ def check_list(urls):
     адреса статус не равен 200 - отправляет
     сообщение в заданный чат тг
     '''
-    
     for url in urls:
         status = req(url)
         if status != 200:
-            with open('ids.json') as f:
-                js = json.load(f)
-            for id in js.values():
-                bot.send_message(str(js[id]), 'Status {} for url: {}'.format(status, url))
+            ids = database.get_users()
+            for id in ids:
+                bot.send_message(str(id), 'Status {} for url: {}'.format(status, url))
 
 def add_url(message):
     '''
     Принимает сообщение, добавляет адрес сайта в
     фаил с адресами,если его там нет
     '''
-    with open('urls.json') as f:
-        js = json.load(f)
-    if message.text not in js and message.text.split('//')[0] in ['http:', 'https:']:
-        js[message.text] = len(js)
-        with open('urls.json', 'w') as f:
-            json.dump(js, f)
+    url = message.text
+    urls = database.get_urls()
+    if url not in urls and url.split('//')[0] in ['http:', 'https:']:
+        database.add_url(url)
 
 def delete_url(message):
     url = message.text
-    with open('urls.json') as f:
-        js = json.load(f)
-        if url in js:
-            js.pop(url)
-    with open('urls.json', 'w') as f:
-        json.dump(js, f)
+    urls = database.get_urls()
+    if url in urls:
+        database.drop_url(url)
 
 def change_target():
     try:
         target = bot.get_updates()[-1].message.chat.id
     except AttributeError:
         target = bot.get_updates()[-1].callback_query.from_user.id
-    with open('ids.json') as f:
-        js = json.load(f)
-        for id in js:
-            if target == js[id]:
-                js[id] = js['main']
-        js['main'] = target
-    with open('ids.json', 'w') as f:
-        json.dump(js, f)
-    return str(target)
-    
+    users = database.get_users()
+    if int(target) in users:
+        database.change_admin(int(target))
+    return str(target)    
 
 def status_check(atribut = 'message'):
     '''
@@ -119,37 +105,38 @@ def callback_check():
         if message: add_url(message) 
                  
     elif callback.data == 'alls':
-        with open('urls.json') as f:
-            js = json.load(f)
-        for i in js.keys():
-            send_message(i)
+        urls = database.get_urls()
+        for url in urls:
+            send_message(url)
     elif callback.data == 'dels':
         send_message('Введите адрес сайта, который хотите удалить:')
         mesage = status_check()
         if mesage: delete_url(mesage)
 
 def check_id(update):
+    '''
+    Проверяет id пользователя в поступившем обновлении на то содержится ли он 
+    в бд, если нет - добавляет его
+    '''
     try:
         id = update.message.chat.id
     except AttributeError:
         id = update.callback_query.from_user.id
-    with open('ids.json') as f:
-        js = json.load(f)
-        if id not in js.values():
-            js[len(js)] = id
-    with open('ids.json', 'w') as f:
-        json.dump(js, f)
+    users = database.get_users()
+    if id not in users:
+        database.add_user(int(id))
 
 def main():
     update_time = time.time()
     check_time = time.time()
     last_update = None
     while True:
-        if time.time() - check_time >= 3600:
+        if time.time() - check_time >= CHECK_TIME:
             with open('urls.json') as f:
                 urls = json.load(f)
             check_list(urls)
             check_time = time.time()
+            
 
         if time.time() - update_time >= 5:
             try:
