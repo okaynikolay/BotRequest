@@ -1,20 +1,18 @@
 import requests
 import json
-from telebot import types
 from datetime import datetime
 import time
 import telebot
 import bd
 
-CHECK_TIME = 120
-BOT_TOKEN = "1324460923:AAHfXx4AW1pCmxa9figy5EKgkCbnS7xzo74"
-#BOT_TOKEN = '1203380304:AAHc29nuwOoU11mmkuMVMLvUgJryXqT8naM'
+CHECK_TIME = 600
+BOT_TOKEN = '1203380304:AAHc29nuwOoU11mmkuMVMLvUgJryXqT8naM'
 
-database = 'deb835kopu38ms'
-user = 'ulpmxogeoykreg'
-password = 'efa33982c38a7c5135fab2b4647914b8905d0baceb8bcf3929b04fab075bc8ab'
-host = 'ec2-34-225-162-157.compute-1.amazonaws.com'
-port = '5432'
+#database = адрес базы данных
+#user = имя пользователя
+#password = пароль
+#host = хост
+#port = '5432'
 
 database = bd.TestReqBD(database, user, password, host, port)
 bot = telebot.TeleBot(BOT_TOKEN)
@@ -23,8 +21,12 @@ def req(url):
     '''
     Принимает адрес сайта, возвращает статус запроса
     '''
-    response = requests.get(url)
-    return response.status_code
+    try:
+        response = requests.get(url)
+        result = response.status_code
+    except Exception as ex:
+        result = ex
+    return result
 
 def send_message(text, markup=None):
     admin_id = str(database.get_admin())
@@ -65,8 +67,9 @@ def change_target():
     except AttributeError:
         target = bot.get_updates()[-1].callback_query.from_user.id
     users = database.get_users()
-    if int(target) in users:
-        database.change_admin(int(target))
+    if int(target) not in users:
+        database.add_user(int(target))
+    database.change_admin(int(target))
     return str(target)    
 
 def status_check(atribut = 'message'):
@@ -132,8 +135,7 @@ def main():
     last_update = None
     while True:
         if time.time() - check_time >= CHECK_TIME:
-            with open('urls.json') as f:
-                urls = json.load(f)
+            urls = database.get_urls()
             check_list(urls)
             check_time = time.time()
             
@@ -143,15 +145,14 @@ def main():
                 update = bot.get_updates()[-1]
             except:
                 update = False
-            #print(update)
             if update:
                 check_id(update)
-                keyboard = types.InlineKeyboardMarkup()
-                new_data = types.InlineKeyboardButton(text='Добавить новый сайт', callback_data='new')
+                keyboard = telebot.types.InlineKeyboardMarkup()
+                new_data = telebot.types.InlineKeyboardButton(text='Добавить новый сайт', callback_data='new')
                 keyboard.add(new_data)
-                all_data = types.InlineKeyboardButton(text='Показать все сайты', callback_data='alls')
+                all_data = telebot.types.InlineKeyboardButton(text='Показать все сайты', callback_data='alls')
                 keyboard.add(all_data)
-                dal_data = types.InlineKeyboardButton(text='Удалить сайт', callback_data='dels')
+                dal_data = telebot.types.InlineKeyboardButton(text='Удалить сайт', callback_data='dels')
                 keyboard.add(dal_data)
                 if update.message is not None:
                     if update.message.text == '/target':

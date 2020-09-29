@@ -79,11 +79,3 @@ class TestReqBD():
         cur.execute("INSERT INTO user_ids(ids, admin, user_id) VALUES((SELECT MAX(ids) + 1 FROM user_ids), False, {})".format(user))
         self.con.commit()
 
-database = 'deb835kopu38ms'
-user = 'ulpmxogeoykreg'
-password = 'efa33982c38a7c5135fab2b4647914b8905d0baceb8bcf3929b04fab075bc8ab'
-host = 'ec2-34-225-162-157.compute-1.amazonaws.com'
-port = '5432'
-
-test = TestReqBD(database, user, password, host, port)
-print(test.get_urls())
